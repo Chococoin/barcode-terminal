@@ -8,8 +8,8 @@
         body {
             margin: 0;
             padding: 0;
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
             overflow: hidden;
         }
         #info {
@@ -17,26 +17,28 @@
             top: 20px;
             left: 20px;
             color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 20px;
-            border-radius: 10px;
-            max-width: 300px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 25px;
+            border-radius: 15px;
+            max-width: 320px;
             z-index: 100;
-            backdrop-filter: blur(10px);
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         #info h2 {
-            margin: 0 0 10px 0;
-            font-size: 20px;
+            margin: 0 0 15px 0;
+            font-size: 22px;
+            color: #4CAF50;
         }
         #info p {
-            margin: 5px 0;
-            font-size: 13px;
-            line-height: 1.5;
+            margin: 8px 0;
+            font-size: 14px;
+            line-height: 1.6;
         }
         #info .specs {
             margin-top: 15px;
             padding-top: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.3);
+            border-top: 1px solid rgba(255, 255, 255, 0.2);
         }
         #controls {
             position: absolute;
@@ -44,11 +46,12 @@
             left: 50%;
             transform: translateX(-50%);
             color: white;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 15px 25px;
-            border-radius: 25px;
-            backdrop-filter: blur(10px);
+            background: rgba(0, 0, 0, 0.7);
+            padding: 15px 30px;
+            border-radius: 30px;
+            backdrop-filter: blur(15px);
             text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
         }
         #canvas-container {
             width: 100vw;
@@ -58,24 +61,29 @@
             color: #4CAF50;
             font-weight: bold;
         }
+        .component-label {
+            color: #FFA726;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
     <div id="info">
-        <h2>🔲 Terminal Portátil de Códigos de Barras</h2>
-        <p><strong>Prototipo v1.0</strong></p>
+        <h2>🔲 Terminal Portátil</h2>
+        <p><strong>Lector de Códigos de Barras</strong></p>
         <div class="specs">
             <p>📏 <span class="highlight">85 x 165 x 30 mm</span></p>
-            <p>⚖️ <span class="highlight">~175g</span></p>
+            <p>⚖️ Peso: <span class="highlight">~175g</span></p>
+            <p><span class="component-label">📱 Display:</span> OLED 1.3" (128x64)</p>
+            <p><span class="component-label">📊 Scanner:</span> GM67 2D/1D</p>
             <p>🔋 Batería: 3000mAh LiPo</p>
-            <p>📱 Conectividad: BLE 5.0</p>
-            <p>📊 Scanner: GM67 2D/1D</p>
-            <p>🖥️ Display: OLED 1.3"</p>
+            <p>📡 BLE 5.0 + ESP32</p>
+            <p>⏱️ Autonomía: ~10-12h</p>
         </div>
     </div>
 
     <div id="controls">
-        🖱️ Arrastra para rotar • 🔍 Scroll para zoom
+        🖱️ Arrastra para rotar • 🔍 Scroll para zoom • 💡 Modelo interactivo 3D
     </div>
 
     <div id="canvas-container"></div>
@@ -92,113 +100,125 @@
     <script type="module">
         import * as THREE from 'three';
         import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 
         // Configuración de la escena
         const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x1a1a2e);
+        scene.background = new THREE.Color(0x0a0e27);
+        scene.fog = new THREE.Fog(0x0a0e27, 300, 600);
 
         // Cámara
         const camera = new THREE.PerspectiveCamera(
-            45,
+            50,
             window.innerWidth / window.innerHeight,
             0.1,
             1000
         );
-        camera.position.set(200, 150, 200);
+        camera.position.set(180, 120, 180);
 
         // Renderer
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
         renderer.shadowMap.enabled = true;
         renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+        renderer.toneMapping = THREE.ACESFilmicToneMapping;
+        renderer.toneMappingExposure = 1.2;
         document.getElementById('canvas-container').appendChild(renderer.domElement);
 
         // Controles
         const controls = new OrbitControls(camera, renderer.domElement);
         controls.enableDamping = true;
         controls.dampingFactor = 0.05;
-        controls.minDistance = 150;
-        controls.maxDistance = 400;
+        controls.minDistance = 120;
+        controls.maxDistance = 350;
+        controls.maxPolarAngle = Math.PI * 0.6;
 
-        // Iluminación
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        // Iluminación mejorada
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
         scene.add(ambientLight);
 
-        const directionalLight1 = new THREE.DirectionalLight(0xffffff, 0.8);
-        directionalLight1.position.set(100, 100, 50);
-        directionalLight1.castShadow = true;
-        directionalLight1.shadow.mapSize.width = 2048;
-        directionalLight1.shadow.mapSize.height = 2048;
-        scene.add(directionalLight1);
+        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
+        mainLight.position.set(100, 150, 80);
+        mainLight.castShadow = true;
+        mainLight.shadow.mapSize.width = 2048;
+        mainLight.shadow.mapSize.height = 2048;
+        mainLight.shadow.camera.near = 0.5;
+        mainLight.shadow.camera.far = 500;
+        scene.add(mainLight);
 
-        const directionalLight2 = new THREE.DirectionalLight(0x4a90e2, 0.4);
-        directionalLight2.position.set(-50, 50, -50);
-        scene.add(directionalLight2);
+        const fillLight = new THREE.DirectionalLight(0x6ba3ff, 0.5);
+        fillLight.position.set(-80, 50, -60);
+        scene.add(fillLight);
 
-        const rimLight = new THREE.DirectionalLight(0xffffff, 0.3);
-        rimLight.position.set(0, 50, -100);
+        const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
+        rimLight.position.set(0, 50, -120);
         scene.add(rimLight);
+
+        // Punto de luz para el scanner
+        const scannerLight = new THREE.PointLight(0xff3333, 0.8, 100);
+        scannerLight.position.set(0, 60, 20);
+        scene.add(scannerLight);
 
         // Grupo principal del terminal
         const terminal = new THREE.Group();
 
-        // Dimensiones en mm (convertidas a unidades Three.js, escala 1:1)
+        // Dimensiones (en mm, escala 1:1)
         const width = 85;
         const height = 165;
         const depth = 30;
-        const cornerRadius = 8;
+        const cornerRadius = 10;
 
-        // Materiales
+        // === MATERIALES MEJORADOS ===
         const bodyMaterial = new THREE.MeshStandardMaterial({
             color: 0x2c3e50,
+            roughness: 0.5,
+            metalness: 0.2
+        });
+
+        const frontPanelMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a252f,
             roughness: 0.4,
             metalness: 0.3
         });
 
-        const frontMaterial = new THREE.MeshStandardMaterial({
-            color: 0x34495e,
+        const displayFrameMaterial = new THREE.MeshStandardMaterial({
+            color: 0x000000,
             roughness: 0.3,
-            metalness: 0.2
+            metalness: 0.6
         });
 
-        const screenMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1a3a52,
+        const displayScreenMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a4d2e,
             roughness: 0.1,
-            metalness: 0.7,
-            emissive: 0x0a4d6e,
+            metalness: 0.1,
+            emissive: 0x0f3d1f,
+            emissiveIntensity: 0.5
+        });
+
+        const scannerBodyMaterial = new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            roughness: 0.3,
+            metalness: 0.7
+        });
+
+        const scannerGlassMaterial = new THREE.MeshPhysicalMaterial({
+            color: 0x330000,
+            metalness: 0.1,
+            roughness: 0.05,
+            transmission: 0.7,
+            thickness: 1,
+            emissive: 0x660000,
             emissiveIntensity: 0.3
         });
 
         const buttonMaterial = new THREE.MeshStandardMaterial({
-            color: 0x95a5a6,
-            roughness: 0.5,
-            metalness: 0.4
+            color: 0x7f8c8d,
+            roughness: 0.4,
+            metalness: 0.5
         });
 
-        const scannerMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1c1c1c,
-            roughness: 0.2,
-            metalness: 0.8,
-            emissive: 0x330000,
-            emissiveIntensity: 0.2
-        });
-
-        const glassMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x88ccff,
-            metalness: 0.1,
-            roughness: 0,
-            transmission: 0.9,
-            thickness: 0.5,
-            envMapIntensity: 1
-        });
-
-        const ledMaterial = new THREE.MeshStandardMaterial({
-            color: 0x00ff00,
-            emissive: 0x00ff00,
-            emissiveIntensity: 0.8
-        });
-
-        // Función para crear cuerpo redondeado
+        // === FUNCIÓN PARA CREAR FORMA REDONDEADA ===
         function createRoundedBox(w, h, d, r) {
             const shape = new THREE.Shape();
             const x = -w/2, y = -h/2;
@@ -216,15 +236,15 @@
             const extrudeSettings = {
                 depth: d,
                 bevelEnabled: true,
-                bevelThickness: 2,
+                bevelThickness: 1.5,
                 bevelSize: 1,
-                bevelSegments: 3
+                bevelSegments: 5
             };
 
             return new THREE.ExtrudeGeometry(shape, extrudeSettings);
         }
 
-        // Cuerpo principal
+        // === CUERPO PRINCIPAL ===
         const bodyGeometry = createRoundedBox(width, height, depth, cornerRadius);
         const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
         body.castShadow = true;
@@ -232,214 +252,385 @@
         body.position.z = -depth/2;
         terminal.add(body);
 
-        // Panel frontal (ligeramente elevado)
-        const frontPanelGeometry = createRoundedBox(width - 4, height - 4, 2, cornerRadius - 1);
-        const frontPanel = new THREE.Mesh(frontPanelGeometry, frontMaterial);
-        frontPanel.position.z = 1;
+        // === PANEL FRONTAL ===
+        const frontPanelGeometry = createRoundedBox(width - 6, height - 6, 3, cornerRadius - 2);
+        const frontPanel = new THREE.Mesh(frontPanelGeometry, frontPanelMaterial);
+        frontPanel.position.z = 1.5;
+        frontPanel.castShadow = true;
         terminal.add(frontPanel);
 
-        // Pantalla OLED (1.3" = ~33mm x 16mm visible)
-        const screenGroup = new THREE.Group();
-        const screenBorderGeometry = new THREE.BoxGeometry(40, 22, 3);
-        const screenBorder = new THREE.Mesh(screenBorderGeometry, new THREE.MeshStandardMaterial({ color: 0x1a1a1a }));
-        screenBorder.position.set(0, height/2 - 35, 2);
+        // === SCANNER GM67 (MÁS GRANDE Y PROMINENTE) ===
+        const scannerY = height/2 - 50;
 
-        const screenDisplayGeometry = new THREE.BoxGeometry(36, 18, 1);
-        const screenDisplay = new THREE.Mesh(screenDisplayGeometry, screenMaterial);
-        screenDisplay.position.set(0, height/2 - 35, 3.5);
+        // Cuerpo del scanner
+        const scannerBodyGeometry = new THREE.BoxGeometry(68, 42, 12);
+        const scannerBody = new THREE.Mesh(scannerBodyGeometry, scannerBodyMaterial);
+        scannerBody.position.set(0, scannerY, 5);
+        scannerBody.castShadow = true;
+        terminal.add(scannerBody);
 
-        terminal.add(screenBorder);
-        terminal.add(screenDisplay);
+        // Marco del scanner
+        const scannerFrameGeometry = new THREE.BoxGeometry(72, 46, 10);
+        const scannerFrame = new THREE.Mesh(scannerFrameGeometry, new THREE.MeshStandardMaterial({
+            color: 0x0a0a0a,
+            roughness: 0.2,
+            metalness: 0.8
+        }));
+        scannerFrame.position.set(0, scannerY, 4);
+        terminal.add(scannerFrame);
 
-        // Scanner GM67 (área de escaneo en la parte superior)
-        const scannerHousingGeometry = new THREE.BoxGeometry(60, 35, 8);
-        const scannerHousing = new THREE.Mesh(scannerHousingGeometry, scannerMaterial);
-        scannerHousing.position.set(0, height/2 - 80, 3);
-        scannerHousing.castShadow = true;
-        terminal.add(scannerHousing);
-
-        // Ventana de vidrio del scanner
-        const scannerGlassGeometry = new THREE.BoxGeometry(50, 25, 2);
-        const scannerGlass = new THREE.Mesh(scannerGlassGeometry, glassMaterial);
-        scannerGlass.position.set(0, height/2 - 80, 7);
+        // Ventana de vidrio del scanner (más grande)
+        const scannerGlassGeometry = new THREE.BoxGeometry(60, 34, 3);
+        const scannerGlass = new THREE.Mesh(scannerGlassGeometry, scannerGlassMaterial);
+        scannerGlass.position.set(0, scannerY, 11);
         terminal.add(scannerGlass);
 
-        // LED indicador del scanner
-        const scannerLedGeometry = new THREE.SphereGeometry(1.5, 16, 16);
-        const scannerLed = new THREE.Mesh(scannerLedGeometry, ledMaterial);
-        scannerLed.position.set(22, height/2 - 68, 7);
-        terminal.add(scannerLed);
-
-        // Botones (4 botones táctiles)
-        const buttonGeometry = new THREE.CylinderGeometry(5, 5, 2, 32);
-        const buttonLabels = ['SCAN', 'OK', 'CANCEL', 'MENU'];
-        const buttonY = -height/2 + 30;
-
-        for (let i = 0; i < 4; i++) {
-            const button = new THREE.Mesh(buttonGeometry, buttonMaterial);
-            button.position.set(-30 + i * 20, buttonY, 3);
-            button.rotation.x = Math.PI / 2;
-            button.castShadow = true;
-            terminal.add(button);
-
-            // Símbolo del botón
-            const symbolGeometry = new THREE.CircleGeometry(3, 32);
-            const symbolMaterial = new THREE.MeshStandardMaterial({
-                color: 0x2c3e50,
-                side: THREE.DoubleSide
+        // Patrón de líneas del scanner (simula el sensor)
+        for (let i = 0; i < 8; i++) {
+            const lineGeometry = new THREE.BoxGeometry(50, 0.5, 1);
+            const lineMaterial = new THREE.MeshStandardMaterial({
+                color: 0xff0000,
+                emissive: 0xff0000,
+                emissiveIntensity: 0.5
             });
-            const symbol = new THREE.Mesh(symbolGeometry, symbolMaterial);
-            symbol.position.set(-30 + i * 20, buttonY, 4.5);
-            terminal.add(symbol);
+            const line = new THREE.Mesh(lineGeometry, lineMaterial);
+            line.position.set(0, scannerY - 15 + i * 4, 11.5);
+            terminal.add(line);
         }
 
-        // Puerto USB-C
-        const usbGeometry = new THREE.BoxGeometry(10, 3.5, 8);
-        const usbMaterial = new THREE.MeshStandardMaterial({
-            color: 0x606060,
-            roughness: 0.3,
-            metalness: 0.7
-        });
-        const usb = new THREE.Mesh(usbGeometry, usbMaterial);
-        usb.position.set(0, -height/2 + 5, -depth/2 - 4);
-        usb.rotation.x = Math.PI / 2;
-        terminal.add(usb);
+        // Etiqueta "SCANNER"
+        const scannerLabelGeometry = new THREE.BoxGeometry(50, 6, 1);
+        const scannerLabel = new THREE.Mesh(scannerLabelGeometry, new THREE.MeshStandardMaterial({
+            color: 0xffffff,
+            emissive: 0x666666,
+            emissiveIntensity: 0.2
+        }));
+        scannerLabel.position.set(0, scannerY - 26, 11);
+        terminal.add(scannerLabel);
 
-        // Interruptor ON/OFF
-        const switchGeometry = new THREE.BoxGeometry(6, 12, 3);
-        const switchMaterial = new THREE.MeshStandardMaterial({
-            color: 0x8B0000,
-            roughness: 0.4,
-            metalness: 0.3
-        });
-        const powerSwitch = new THREE.Mesh(switchGeometry, switchMaterial);
-        powerSwitch.position.set(width/2 - 6, height/2 - 20, -depth/2 - 1);
-        terminal.add(powerSwitch);
-
-        // LEDs indicadores (superior)
-        const ledPositions = [
-            { x: -15, y: height/2 - 15, color: 0xff0000 },  // Batería
-            { x: -5, y: height/2 - 15, color: 0x00ff00 },   // Power
-            { x: 5, y: height/2 - 15, color: 0x0000ff }     // BLE
+        // LEDs del scanner
+        const scannerLedPositions = [
+            { x: -25, y: scannerY + 18, color: 0xff0000 },
+            { x: 25, y: scannerY + 18, color: 0x00ff00 }
         ];
 
-        ledPositions.forEach(pos => {
-            const led = new THREE.Mesh(
-                new THREE.SphereGeometry(1.2, 16, 16),
-                new THREE.MeshStandardMaterial({
-                    color: pos.color,
-                    emissive: pos.color,
-                    emissiveIntensity: 0.6
-                })
-            );
-            led.position.set(pos.x, pos.y, 3);
+        scannerLedPositions.forEach(pos => {
+            const ledGeometry = new THREE.SphereGeometry(2, 16, 16);
+            const led = new THREE.Mesh(ledGeometry, new THREE.MeshStandardMaterial({
+                color: pos.color,
+                emissive: pos.color,
+                emissiveIntensity: 1
+            }));
+            led.position.set(pos.x, pos.y, 11);
             terminal.add(led);
         });
 
-        // Detalles adicionales: rejilla de altavoz/buzzer
-        const speakerGeometry = new THREE.CircleGeometry(8, 32);
-        const speakerMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1a1a1a,
-            roughness: 0.8
-        });
-        const speaker = new THREE.Mesh(speakerGeometry, speakerMaterial);
-        speaker.position.set(25, -height/2 + 50, 2);
-        terminal.add(speaker);
+        // === PANTALLA OLED (MÁS VISIBLE Y REALISTA) ===
+        const displayY = height/2 - 110;
 
-        // Añadir pequeños agujeros en el altavoz
-        for (let i = 0; i < 6; i++) {
-            for (let j = 0; j < 6; j++) {
-                const holeGeometry = new THREE.CircleGeometry(0.5, 8);
-                const hole = new THREE.Mesh(holeGeometry, new THREE.MeshStandardMaterial({ color: 0x000000 }));
-                hole.position.set(
-                    25 + (i - 2.5) * 2,
-                    -height/2 + 50 + (j - 2.5) * 2,
-                    2.5
-                );
-                terminal.add(hole);
-            }
+        // Marco de la pantalla
+        const displayFrameGeometry = new THREE.BoxGeometry(52, 30, 4);
+        const displayFrame = new THREE.Mesh(displayFrameGeometry, displayFrameMaterial);
+        displayFrame.position.set(0, displayY, 5);
+        displayFrame.castShadow = true;
+        terminal.add(displayFrame);
+
+        // Pantalla activa (área visible)
+        const displayGeometry = new THREE.BoxGeometry(46, 24, 2);
+        const display = new THREE.Mesh(displayGeometry, displayScreenMaterial);
+        display.position.set(0, displayY, 7.5);
+        terminal.add(display);
+
+        // Simular píxeles/texto en la pantalla
+        const pixelGroup = new THREE.Group();
+
+        // "Barcode Terminal" simulado
+        const textLines = [
+            { y: 8, width: 35, brightness: 1.0 },    // Título
+            { y: 4, width: 30, brightness: 0.7 },    // Línea 2
+            { y: 0, width: 38, brightness: 0.9 },    // Línea 3
+            { y: -4, width: 25, brightness: 0.6 },   // Línea 4
+            { y: -8, width: 32, brightness: 0.8 }    // Línea 5
+        ];
+
+        textLines.forEach(line => {
+            const textGeometry = new THREE.BoxGeometry(line.width, 2, 0.5);
+            const textMaterial = new THREE.MeshStandardMaterial({
+                color: 0x00ff00,
+                emissive: 0x00ff00,
+                emissiveIntensity: line.brightness
+            });
+            const text = new THREE.Mesh(textGeometry, textMaterial);
+            text.position.set(0, displayY + line.y, 8.6);
+            terminal.add(text);
+        });
+
+        // Borde iluminado de la pantalla
+        const displayGlowGeometry = new THREE.BoxGeometry(48, 26, 1.5);
+        const displayGlow = new THREE.Mesh(displayGlowGeometry, new THREE.MeshStandardMaterial({
+            color: 0x00ff00,
+            emissive: 0x00ff00,
+            emissiveIntensity: 0.2,
+            transparent: true,
+            opacity: 0.3
+        }));
+        displayGlow.position.set(0, displayY, 8.2);
+        terminal.add(displayGlow);
+
+        // === BOTONES (4 BOTONES TÁCTILES) ===
+        const buttonY = -height/2 + 40;
+        const buttonSpacing = 19;
+        const buttonStartX = -28.5;
+
+        const buttonLabels = ['▶', '✓', '✕', '☰'];
+        const buttonColors = [0x4CAF50, 0x2196F3, 0xf44336, 0xFF9800];
+
+        for (let i = 0; i < 4; i++) {
+            // Base del botón
+            const buttonBaseGeometry = new THREE.CylinderGeometry(6, 6, 2, 32);
+            const buttonBase = new THREE.Mesh(buttonBaseGeometry, new THREE.MeshStandardMaterial({
+                color: 0x1a1a1a,
+                roughness: 0.3,
+                metalness: 0.6
+            }));
+            buttonBase.position.set(buttonStartX + i * buttonSpacing, buttonY, 5);
+            buttonBase.rotation.x = Math.PI / 2;
+            terminal.add(buttonBase);
+
+            // Botón superior
+            const buttonTopGeometry = new THREE.CylinderGeometry(5, 5, 3, 32);
+            const buttonTop = new THREE.Mesh(buttonTopGeometry, new THREE.MeshStandardMaterial({
+                color: buttonColors[i],
+                roughness: 0.4,
+                metalness: 0.5,
+                emissive: buttonColors[i],
+                emissiveIntensity: 0.2
+            }));
+            buttonTop.position.set(buttonStartX + i * buttonSpacing, buttonY, 8);
+            buttonTop.rotation.x = Math.PI / 2;
+            buttonTop.castShadow = true;
+            terminal.add(buttonTop);
+
+            // Anillo LED alrededor del botón
+            const ringGeometry = new THREE.TorusGeometry(5.5, 0.5, 16, 32);
+            const ring = new THREE.Mesh(ringGeometry, new THREE.MeshStandardMaterial({
+                color: buttonColors[i],
+                emissive: buttonColors[i],
+                emissiveIntensity: 0.5
+            }));
+            ring.position.set(buttonStartX + i * buttonSpacing, buttonY, 7);
+            terminal.add(ring);
         }
 
-        // Logo/texto en el panel frontal
-        const logoGeometry = new THREE.BoxGeometry(30, 8, 0.5);
-        const logoMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4a90e2,
-            emissive: 0x2c5aa0,
-            emissiveIntensity: 0.3
+        // === PUERTO USB-C ===
+        const usbY = -height/2 + 8;
+        const usbHousingGeometry = new THREE.BoxGeometry(12, 4.5, 10);
+        const usbHousing = new THREE.Mesh(usbHousingGeometry, new THREE.MeshStandardMaterial({
+            color: 0x2a2a2a,
+            roughness: 0.3,
+            metalness: 0.7
+        }));
+        usbHousing.position.set(0, usbY, -depth/2 - 5);
+        usbHousing.rotation.x = Math.PI / 2;
+        terminal.add(usbHousing);
+
+        // Interior del puerto USB-C
+        const usbPortGeometry = new THREE.BoxGeometry(9, 3, 7);
+        const usbPort = new THREE.Mesh(usbPortGeometry, new THREE.MeshStandardMaterial({
+            color: 0x000000,
+            roughness: 0.2,
+            metalness: 0.9
+        }));
+        usbPort.position.set(0, usbY, -depth/2 - 5);
+        usbPort.rotation.x = Math.PI / 2;
+        terminal.add(usbPort);
+
+        // === INTERRUPTOR ON/OFF (LATERAL) ===
+        const switchGeometry = new THREE.BoxGeometry(5, 15, 4);
+        const powerSwitch = new THREE.Mesh(switchGeometry, new THREE.MeshStandardMaterial({
+            color: 0xc0392b,
+            roughness: 0.4,
+            metalness: 0.4
+        }));
+        powerSwitch.position.set(width/2 - 2, height/2 - 25, -depth/2);
+        powerSwitch.castShadow = true;
+        terminal.add(powerSwitch);
+
+        // === LEDS INDICADORES SUPERIORES ===
+        const ledIndicatorY = height/2 - 15;
+        const ledIndicators = [
+            { x: -20, color: 0xff0000, label: 'BAT' },
+            { x: 0, color: 0x00ff00, label: 'PWR' },
+            { x: 20, color: 0x0066ff, label: 'BLE' }
+        ];
+
+        ledIndicators.forEach(indicator => {
+            const ledGeometry = new THREE.SphereGeometry(1.8, 16, 16);
+            const led = new THREE.Mesh(ledGeometry, new THREE.MeshStandardMaterial({
+                color: indicator.color,
+                emissive: indicator.color,
+                emissiveIntensity: 0.8
+            }));
+            led.position.set(indicator.x, ledIndicatorY, 6);
+            terminal.add(led);
+
+            // Halo de luz alrededor del LED
+            const haloGeometry = new THREE.SphereGeometry(2.5, 16, 16);
+            const halo = new THREE.Mesh(haloGeometry, new THREE.MeshStandardMaterial({
+                color: indicator.color,
+                emissive: indicator.color,
+                emissiveIntensity: 0.3,
+                transparent: true,
+                opacity: 0.4
+            }));
+            halo.position.set(indicator.x, ledIndicatorY, 6);
+            terminal.add(halo);
         });
-        const logo = new THREE.Mesh(logoGeometry, logoMaterial);
-        logo.position.set(0, -height/2 + 15, 3);
+
+        // === ALTAVOZ/BUZZER ===
+        const speakerGeometry = new THREE.CylinderGeometry(10, 10, 2, 32);
+        const speaker = new THREE.Mesh(speakerGeometry, new THREE.MeshStandardMaterial({
+            color: 0x1a1a1a,
+            roughness: 0.7,
+            metalness: 0.3
+        }));
+        speaker.position.set(0, -height/2 + 75, 5);
+        speaker.rotation.x = Math.PI / 2;
+        terminal.add(speaker);
+
+        // Rejilla del altavoz
+        for (let i = 0; i < 20; i++) {
+            const angle = (i / 20) * Math.PI * 2;
+            const radius = 6;
+            const holeGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
+            const hole = new THREE.Mesh(holeGeometry, new THREE.MeshStandardMaterial({
+                color: 0x000000
+            }));
+            hole.position.set(
+                Math.cos(angle) * radius,
+                -height/2 + 75,
+                5 + Math.sin(angle) * radius
+            );
+            hole.rotation.x = Math.PI / 2;
+            terminal.add(hole);
+        }
+
+        // === LOGO/MARCA ===
+        const logoGeometry = new THREE.BoxGeometry(40, 8, 1);
+        const logo = new THREE.Mesh(logoGeometry, new THREE.MeshStandardMaterial({
+            color: 0x3498db,
+            emissive: 0x2980b9,
+            emissiveIntensity: 0.4,
+            roughness: 0.3,
+            metalness: 0.6
+        }));
+        logo.position.set(0, -height/2 + 20, 6);
         terminal.add(logo);
 
-        // Agregar el terminal a la escena
+        // Detalles de ventilación (laterales)
+        for (let i = 0; i < 5; i++) {
+            const ventGeometry = new THREE.BoxGeometry(2, 15, 0.5);
+            const vent = new THREE.Mesh(ventGeometry, new THREE.MeshStandardMaterial({
+                color: 0x000000,
+                roughness: 0.8
+            }));
+            vent.position.set(width/2 - 8, -20 + i * 15, 5);
+            terminal.add(vent);
+        }
+
+        // Agregar terminal a la escena
         scene.add(terminal);
 
-        // Plataforma de exhibición
-        const platformGeometry = new THREE.CylinderGeometry(120, 130, 10, 64);
+        // === PLATAFORMA DE EXHIBICIÓN ===
+        const platformGeometry = new THREE.CylinderGeometry(110, 120, 8, 64);
         const platformMaterial = new THREE.MeshStandardMaterial({
-            color: 0x16213e,
-            roughness: 0.3,
-            metalness: 0.5
+            color: 0x0f1922,
+            roughness: 0.2,
+            metalness: 0.7
         });
         const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-        platform.position.y = -height/2 - 10;
+        platform.position.y = -height/2 - 8;
         platform.receiveShadow = true;
         scene.add(platform);
 
-        // Anillos decorativos en la plataforma
-        const ringGeometry = new THREE.RingGeometry(125, 127, 64);
-        const ringMaterial = new THREE.MeshStandardMaterial({
-            color: 0x4a90e2,
-            side: THREE.DoubleSide,
-            emissive: 0x2c5aa0,
-            emissiveIntensity: 0.4
-        });
-        const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-        ring.rotation.x = -Math.PI / 2;
-        ring.position.y = -height/2 - 4.5;
-        scene.add(ring);
+        // Anillos concéntricos en la plataforma
+        for (let i = 1; i <= 3; i++) {
+            const ringGeometry = new THREE.RingGeometry(100 + i * 8, 102 + i * 8, 64);
+            const ringMaterial = new THREE.MeshStandardMaterial({
+                color: 0x3498db,
+                side: THREE.DoubleSide,
+                emissive: 0x2980b9,
+                emissiveIntensity: 0.3 / i,
+                transparent: true,
+                opacity: 0.6 / i
+            });
+            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+            ring.rotation.x = -Math.PI / 2;
+            ring.position.y = -height/2 - 3.5;
+            scene.add(ring);
+        }
 
-        // Partículas de fondo
+        // === PARTÍCULAS DE FONDO ===
         const particlesGeometry = new THREE.BufferGeometry();
-        const particlesCount = 200;
+        const particlesCount = 300;
         const posArray = new Float32Array(particlesCount * 3);
 
         for (let i = 0; i < particlesCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 500;
+            posArray[i] = (Math.random() - 0.5) * 600;
         }
 
         particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
         const particlesMaterial = new THREE.PointsMaterial({
             size: 2,
-            color: 0x4a90e2,
+            color: 0x3498db,
             transparent: true,
-            opacity: 0.6
+            opacity: 0.6,
+            blending: THREE.AdditiveBlending
         });
 
         const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
         scene.add(particlesMesh);
 
-        // Animación
+        // === ANIMACIÓN ===
         let time = 0;
         function animate() {
             requestAnimationFrame(animate);
 
-            time += 0.01;
+            time += 0.008;
 
-            // Rotación suave del terminal
-            terminal.rotation.y = Math.sin(time * 0.3) * 0.1;
+            // Rotación suave automática del terminal
+            terminal.rotation.y = Math.sin(time * 0.2) * 0.15;
 
-            // Animación de LEDs (parpadeando)
-            scannerLed.material.emissiveIntensity = 0.8 + Math.sin(time * 3) * 0.2;
+            // Animación de LEDs del scanner
+            scannerLedPositions.forEach((pos, index) => {
+                const led = terminal.children.find(child =>
+                    child.position.x === pos.x &&
+                    child.position.y === pos.y &&
+                    child.geometry instanceof THREE.SphereGeometry
+                );
+                if (led) {
+                    led.material.emissiveIntensity = 0.6 + Math.sin(time * 2 + index) * 0.4;
+                }
+            });
+
+            // Parpadeo de LEDs indicadores
+            ledIndicators.forEach((indicator, index) => {
+                const intensity = 0.6 + Math.sin(time * 1.5 + index * 2) * 0.3;
+                // Buscar y actualizar los LEDs
+            });
 
             // Rotación de partículas
-            particlesMesh.rotation.y = time * 0.05;
+            particlesMesh.rotation.y = time * 0.03;
+            particlesMesh.rotation.x = time * 0.02;
+
+            // Pulsación suave de la luz del scanner
+            scannerLight.intensity = 0.6 + Math.sin(time * 3) * 0.3;
 
             controls.update();
             renderer.render(scene, camera);
         }
 
-        // Responsive
+        // === RESPONSIVE ===
         window.addEventListener('resize', () => {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
