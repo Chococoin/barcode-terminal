@@ -3,641 +3,942 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Terminal de Códigos de Barras - Render 3D</title>
+    <title>Terminal Scanner 3D - Render Profesional</title>
     <style>
-        body {
+        * {
             margin: 0;
             padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            background: linear-gradient(135deg, #0a1929 0%, #1a3a52 100%);
             overflow: hidden;
         }
-        #info {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 25px;
-            border-radius: 15px;
-            max-width: 320px;
-            z-index: 100;
-            backdrop-filter: blur(15px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
-        #info h2 {
-            margin: 0 0 15px 0;
-            font-size: 22px;
-            color: #4CAF50;
-        }
-        #info p {
-            margin: 8px 0;
-            font-size: 14px;
-            line-height: 1.6;
-        }
-        #info .specs {
-            margin-top: 15px;
-            padding-top: 15px;
-            border-top: 1px solid rgba(255, 255, 255, 0.2);
-        }
-        #controls {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            color: white;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 15px 30px;
-            border-radius: 30px;
-            backdrop-filter: blur(15px);
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-        }
+
         #canvas-container {
             width: 100vw;
             height: 100vh;
+            position: relative;
         }
-        .highlight {
-            color: #4CAF50;
-            font-weight: bold;
+
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 25px;
+            border-radius: 15px;
+            color: white;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 280px;
+            z-index: 100;
         }
-        .component-label {
-            color: #FFA726;
-            font-weight: bold;
+
+        .info-panel h2 {
+            margin-bottom: 15px;
+            color: #3498db;
+            font-size: 24px;
+            text-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        .spec {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+            font-size: 14px;
+        }
+
+        .spec strong {
+            color: #5dade2;
+        }
+
+        .spec:last-child {
+            border-bottom: none;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 15px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px 30px;
+            border-radius: 15px;
+            backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            z-index: 100;
+            flex-wrap: wrap;
+            justify-content: center;
+            max-width: 90%;
+        }
+
+        .control-btn {
+            padding: 12px 24px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .control-btn:hover {
+            background: rgba(52, 152, 219, 0.3);
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.3);
+        }
+
+        .control-btn.active {
+            background: #3498db;
+            border-color: #3498db;
+            box-shadow: 0 5px 20px rgba(52, 152, 219, 0.5);
+        }
+
+        .loading {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            color: white;
+            font-size: 24px;
+            z-index: 200;
+            text-align: center;
+        }
+
+        .stats {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            color: rgba(255, 255, 255, 0.5);
+            font-size: 12px;
+            z-index: 100;
+            font-family: monospace;
+        }
+
+        @keyframes spin {
+            to { transform: translate(-50%, -50%) rotate(360deg); }
+        }
+
+        .loading::after {
+            content: '';
+            display: block;
+            width: 40px;
+            height: 40px;
+            margin: 10px auto;
+            border: 3px solid rgba(52, 152, 219, 0.3);
+            border-top-color: #3498db;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
         }
     </style>
 </head>
 <body>
-    <div id="info">
-        <h2>🔲 Terminal Portátil</h2>
-        <p><strong>Lector de Códigos de Barras</strong></p>
-        <div class="specs">
-            <p>📏 <span class="highlight">85 x 165 x 30 mm</span></p>
-            <p>⚖️ Peso: <span class="highlight">~175g</span></p>
-            <p><span class="component-label">📱 Display:</span> OLED 1.3" (128x64)</p>
-            <p><span class="component-label">📊 Scanner:</span> GM67 2D/1D</p>
-            <p>🔋 Batería: 3000mAh LiPo</p>
-            <p>📡 BLE 5.0 + ESP32</p>
-            <p>⏱️ Autonomía: ~10-12h</p>
+    <div id="canvas-container">
+        <div class="loading" id="loading">Cargando modelo 3D...</div>
+    </div>
+
+    <div class="info-panel">
+        <h2>Terminal GM67 Pro</h2>
+        <div class="spec">
+            <strong>Modelo:</strong>
+            <span>SCN-2025-X</span>
+        </div>
+        <div class="spec">
+            <strong>Scanner:</strong>
+            <span>2D/1D GM67</span>
+        </div>
+        <div class="spec">
+            <strong>Pantalla:</strong>
+            <span>OLED 128x64</span>
+        </div>
+        <div class="spec">
+            <strong>Conectividad:</strong>
+            <span>BT 5.0 / USB-C</span>
+        </div>
+        <div class="spec">
+            <strong>Batería:</strong>
+            <span>3000mAh Li-Po</span>
+        </div>
+        <div class="spec">
+            <strong>Peso:</strong>
+            <span>~175g</span>
+        </div>
+        <div class="spec">
+            <strong>Dimensiones:</strong>
+            <span>85×165×30mm</span>
         </div>
     </div>
 
-    <div id="controls">
-        🖱️ Arrastra para rotar • 🔍 Scroll para zoom • 💡 Modelo interactivo 3D
+    <div class="controls">
+        <button class="control-btn" onclick="setView('auto')">🔄 Auto-Rotación</button>
+        <button class="control-btn active" onclick="setView('interactive')">🖱️ Control Manual</button>
+        <button class="control-btn" onclick="setView('front')">📱 Vista Frontal</button>
+        <button class="control-btn" onclick="setView('back')">🔙 Vista Trasera</button>
+        <button class="control-btn" onclick="setView('side')">↔️ Vista Lateral</button>
+        <button class="control-btn" onclick="setView('angle')">📐 Vista 3/4</button>
     </div>
 
-    <div id="canvas-container"></div>
+    <div class="stats" id="stats"></div>
 
-    <script type="importmap">
-    {
-        "imports": {
-            "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
-            "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script>
+        // Variables globales
+        let scene, camera, renderer, controls;
+        let deviceGroup, scannerLight;
+        let autoRotate = false;
+        let targetRotation = { x: 0, y: 0 };
+        let clock = new THREE.Clock();
+        let laserLines = [];
+        let leds = [];
+        let screenGlow;
+        let platform, platformRings = [];
+        let particles;
+        let frameCount = 0;
+        let lastTime = performance.now();
+
+        // Inicialización
+        function init() {
+            // Escena
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(0x0a1929);
+            scene.fog = new THREE.Fog(0x0a1929, 20, 60);
+
+            // Cámara
+            camera = new THREE.PerspectiveCamera(
+                45,
+                window.innerWidth / window.innerHeight,
+                0.1,
+                1000
+            );
+            camera.position.set(18, 12, 18);
+            camera.lookAt(0, 0, 0);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({
+                antialias: true,
+                alpha: false
+            });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+            renderer.shadowMap.enabled = true;
+            renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+            renderer.toneMapping = THREE.ACESFilmicToneMapping;
+            renderer.toneMappingExposure = 1.2;
+
+            document.getElementById('canvas-container').appendChild(renderer.domElement);
+
+            // Controles OrbitControls
+            controls = new THREE.OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+            controls.minDistance = 12;
+            controls.maxDistance = 40;
+            controls.maxPolarAngle = Math.PI * 0.55;
+            controls.autoRotate = false;
+            controls.autoRotateSpeed = 1.5;
+
+            // Iluminación
+            setupLighting();
+
+            // Crear dispositivo
+            createDevice();
+
+            // Plataforma de exhibición
+            createPlatform();
+
+            // Partículas de fondo
+            createParticles();
+
+            // Event listeners
+            setupEventListeners();
+
+            // Ocultar loading
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 1500);
+
+            // Iniciar animación
+            animate();
         }
-    }
-    </script>
 
-    <script type="module">
-        import * as THREE from 'three';
-        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-        import { FontLoader } from 'three/addons/loaders/FontLoader.js';
-        import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
+        function setupLighting() {
+            // Luz ambiental
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
+            scene.add(ambientLight);
 
-        // Configuración de la escena
-        const scene = new THREE.Scene();
-        scene.background = new THREE.Color(0x0a0e27);
-        scene.fog = new THREE.Fog(0x0a0e27, 300, 600);
+            // Luz principal (key light)
+            const keyLight = new THREE.DirectionalLight(0xffffff, 1.2);
+            keyLight.position.set(10, 15, 8);
+            keyLight.castShadow = true;
+            keyLight.shadow.camera.near = 0.1;
+            keyLight.shadow.camera.far = 50;
+            keyLight.shadow.camera.left = -15;
+            keyLight.shadow.camera.right = 15;
+            keyLight.shadow.camera.top = 15;
+            keyLight.shadow.camera.bottom = -15;
+            keyLight.shadow.mapSize.width = 2048;
+            keyLight.shadow.mapSize.height = 2048;
+            keyLight.shadow.bias = -0.001;
+            scene.add(keyLight);
 
-        // Cámara
-        const camera = new THREE.PerspectiveCamera(
-            50,
-            window.innerWidth / window.innerHeight,
-            0.1,
-            1000
-        );
-        camera.position.set(180, 120, 180);
+            // Luz de relleno (fill light)
+            const fillLight = new THREE.DirectionalLight(0x6ba3ff, 0.4);
+            fillLight.position.set(-8, 8, 8);
+            scene.add(fillLight);
 
-        // Renderer
-        const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(window.innerWidth, window.innerHeight);
-        renderer.shadowMap.enabled = true;
-        renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-        renderer.toneMapping = THREE.ACESFilmicToneMapping;
-        renderer.toneMappingExposure = 1.2;
-        document.getElementById('canvas-container').appendChild(renderer.domElement);
+            // Luz trasera (rim light)
+            const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
+            rimLight.position.set(0, 8, -15);
+            scene.add(rimLight);
 
-        // Controles
-        const controls = new OrbitControls(camera, renderer.domElement);
-        controls.enableDamping = true;
-        controls.dampingFactor = 0.05;
-        controls.minDistance = 120;
-        controls.maxDistance = 350;
-        controls.maxPolarAngle = Math.PI * 0.6;
+            // Luz puntual para el scanner
+            scannerLight = new THREE.PointLight(0xff0000, 0.6, 10);
+            scannerLight.position.set(0, 4, 3);
+            scene.add(scannerLight);
 
-        // Iluminación mejorada
-        const ambientLight = new THREE.AmbientLight(0xffffff, 0.5);
-        scene.add(ambientLight);
+            // Luz puntual para la pantalla
+            const screenLight = new THREE.PointLight(0x00ff00, 0.4, 8);
+            screenLight.position.set(0, -1, 3);
+            scene.add(screenLight);
+        }
 
-        const mainLight = new THREE.DirectionalLight(0xffffff, 1.2);
-        mainLight.position.set(100, 150, 80);
-        mainLight.castShadow = true;
-        mainLight.shadow.mapSize.width = 2048;
-        mainLight.shadow.mapSize.height = 2048;
-        mainLight.shadow.camera.near = 0.5;
-        mainLight.shadow.camera.far = 500;
-        scene.add(mainLight);
+        function createDevice() {
+            deviceGroup = new THREE.Group();
 
-        const fillLight = new THREE.DirectionalLight(0x6ba3ff, 0.5);
-        fillLight.position.set(-80, 50, -60);
-        scene.add(fillLight);
+            // Escala para convertir mm a unidades Three.js
+            const scale = 0.1;
+            deviceGroup.scale.set(scale, scale, scale);
 
-        const rimLight = new THREE.DirectionalLight(0xffffff, 0.4);
-        rimLight.position.set(0, 50, -120);
-        scene.add(rimLight);
+            // Materiales mejorados
+            const casingMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x34495e,
+                roughness: 0.6,
+                metalness: 0.3,
+                clearcoat: 0.2,
+                clearcoatRoughness: 0.5
+            });
 
-        // Punto de luz para el scanner
-        const scannerLight = new THREE.PointLight(0xff3333, 0.8, 100);
-        scannerLight.position.set(0, 60, 20);
-        scene.add(scannerLight);
+            const frontPanelMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x1a252f,
+                roughness: 0.7,
+                metalness: 0.2
+            });
 
-        // Grupo principal del terminal
-        const terminal = new THREE.Group();
+            // Carcasa principal con bordes redondeados
+            const casingShape = new THREE.Shape();
+            const x = -42.5, y = -82.5;
+            const width = 85, height = 165;
+            const radius = 10;
 
-        // Dimensiones (en mm, escala 1:1)
-        const width = 85;
-        const height = 165;
-        const depth = 30;
-        const cornerRadius = 10;
-
-        // === MATERIALES MEJORADOS ===
-        const bodyMaterial = new THREE.MeshStandardMaterial({
-            color: 0x2c3e50,
-            roughness: 0.5,
-            metalness: 0.2
-        });
-
-        const frontPanelMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1a252f,
-            roughness: 0.4,
-            metalness: 0.3
-        });
-
-        const displayFrameMaterial = new THREE.MeshStandardMaterial({
-            color: 0x000000,
-            roughness: 0.3,
-            metalness: 0.6
-        });
-
-        const displayScreenMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1a4d2e,
-            roughness: 0.1,
-            metalness: 0.1,
-            emissive: 0x0f3d1f,
-            emissiveIntensity: 0.5
-        });
-
-        const scannerBodyMaterial = new THREE.MeshStandardMaterial({
-            color: 0x1a1a1a,
-            roughness: 0.3,
-            metalness: 0.7
-        });
-
-        const scannerGlassMaterial = new THREE.MeshPhysicalMaterial({
-            color: 0x330000,
-            metalness: 0.1,
-            roughness: 0.05,
-            transmission: 0.7,
-            thickness: 1,
-            emissive: 0x660000,
-            emissiveIntensity: 0.3
-        });
-
-        const buttonMaterial = new THREE.MeshStandardMaterial({
-            color: 0x7f8c8d,
-            roughness: 0.4,
-            metalness: 0.5
-        });
-
-        // === FUNCIÓN PARA CREAR FORMA REDONDEADA ===
-        function createRoundedBox(w, h, d, r) {
-            const shape = new THREE.Shape();
-            const x = -w/2, y = -h/2;
-
-            shape.moveTo(x + r, y);
-            shape.lineTo(x + w - r, y);
-            shape.quadraticCurveTo(x + w, y, x + w, y + r);
-            shape.lineTo(x + w, y + h - r);
-            shape.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-            shape.lineTo(x + r, y + h);
-            shape.quadraticCurveTo(x, y + h, x, y + h - r);
-            shape.lineTo(x, y + r);
-            shape.quadraticCurveTo(x, y, x + r, y);
+            casingShape.moveTo(x, y + radius);
+            casingShape.lineTo(x, y + height - radius);
+            casingShape.quadraticCurveTo(x, y + height, x + radius, y + height);
+            casingShape.lineTo(x + width - radius, y + height);
+            casingShape.quadraticCurveTo(x + width, y + height, x + width, y + height - radius);
+            casingShape.lineTo(x + width, y + radius);
+            casingShape.quadraticCurveTo(x + width, y, x + width - radius, y);
+            casingShape.lineTo(x + radius, y);
+            casingShape.quadraticCurveTo(x, y, x, y + radius);
 
             const extrudeSettings = {
-                depth: d,
+                depth: 30,
                 bevelEnabled: true,
-                bevelThickness: 1.5,
+                bevelSegments: 5,
                 bevelSize: 1,
-                bevelSegments: 5
+                bevelThickness: 1.5
             };
 
-            return new THREE.ExtrudeGeometry(shape, extrudeSettings);
+            const casingGeometry = new THREE.ExtrudeGeometry(casingShape, extrudeSettings);
+            const casing = new THREE.Mesh(casingGeometry, casingMaterial);
+            casing.position.z = -15;
+            casing.castShadow = true;
+            casing.receiveShadow = true;
+            deviceGroup.add(casing);
+
+            // Panel frontal
+            const frontPanelGeometry = new THREE.BoxGeometry(79, 159, 3);
+            const frontPanel = new THREE.Mesh(frontPanelGeometry, frontPanelMaterial);
+            frontPanel.position.z = 16;
+            frontPanel.castShadow = true;
+            deviceGroup.add(frontPanel);
+
+            // Componentes
+            createLEDs();
+            createScanner();
+            createScreen();
+            createSpeaker();
+            createLogo();
+            createButtons();
+            createUSBPort();
+            createPowerSwitch();
+
+            scene.add(deviceGroup);
         }
 
-        // === CUERPO PRINCIPAL ===
-        const bodyGeometry = createRoundedBox(width, height, depth, cornerRadius);
-        const body = new THREE.Mesh(bodyGeometry, bodyMaterial);
-        body.castShadow = true;
-        body.receiveShadow = true;
-        body.position.z = -depth/2;
-        terminal.add(body);
+        function createLEDs() {
+            const ledPositions = [
+                { x: -20, color: 0xff0000, name: 'battery' },
+                { x: 0, color: 0x00ff00, name: 'power' },
+                { x: 20, color: 0x0066ff, name: 'bluetooth' }
+            ];
 
-        // === PANEL FRONTAL ===
-        const frontPanelGeometry = createRoundedBox(width - 6, height - 6, 3, cornerRadius - 2);
-        const frontPanel = new THREE.Mesh(frontPanelGeometry, frontPanelMaterial);
-        frontPanel.position.z = 1.5;
-        frontPanel.castShadow = true;
-        terminal.add(frontPanel);
+            ledPositions.forEach(ledInfo => {
+                const ledGeometry = new THREE.SphereGeometry(1.8, 16, 16);
+                const ledMaterial = new THREE.MeshPhysicalMaterial({
+                    color: ledInfo.color,
+                    emissive: ledInfo.color,
+                    emissiveIntensity: 0.8,
+                    roughness: 0.2,
+                    metalness: 0.5,
+                    clearcoat: 1,
+                    clearcoatRoughness: 0
+                });
 
-        // === SCANNER GM67 (MÁS GRANDE Y PROMINENTE) ===
-        const scannerY = height/2 - 50;
+                const led = new THREE.Mesh(ledGeometry, ledMaterial);
+                led.position.set(ledInfo.x, 70, 18);
+                led.userData.name = ledInfo.name;
+                led.userData.baseColor = ledInfo.color;
 
-        // Cuerpo del scanner
-        const scannerBodyGeometry = new THREE.BoxGeometry(68, 42, 12);
-        const scannerBody = new THREE.Mesh(scannerBodyGeometry, scannerBodyMaterial);
-        scannerBody.position.set(0, scannerY, 5);
-        scannerBody.castShadow = true;
-        terminal.add(scannerBody);
+                // Halo para el LED
+                const haloGeometry = new THREE.SphereGeometry(2.5, 16, 16);
+                const haloMaterial = new THREE.MeshBasicMaterial({
+                    color: ledInfo.color,
+                    transparent: true,
+                    opacity: 0.3
+                });
+                const halo = new THREE.Mesh(haloGeometry, haloMaterial);
+                halo.position.copy(led.position);
 
-        // Marco del scanner
-        const scannerFrameGeometry = new THREE.BoxGeometry(72, 46, 10);
-        const scannerFrame = new THREE.Mesh(scannerFrameGeometry, new THREE.MeshStandardMaterial({
-            color: 0x0a0a0a,
-            roughness: 0.2,
-            metalness: 0.8
-        }));
-        scannerFrame.position.set(0, scannerY, 4);
-        terminal.add(scannerFrame);
-
-        // Ventana de vidrio del scanner (más grande)
-        const scannerGlassGeometry = new THREE.BoxGeometry(60, 34, 3);
-        const scannerGlass = new THREE.Mesh(scannerGlassGeometry, scannerGlassMaterial);
-        scannerGlass.position.set(0, scannerY, 11);
-        terminal.add(scannerGlass);
-
-        // Patrón de líneas del scanner (simula el sensor)
-        for (let i = 0; i < 8; i++) {
-            const lineGeometry = new THREE.BoxGeometry(50, 0.5, 1);
-            const lineMaterial = new THREE.MeshStandardMaterial({
-                color: 0xff0000,
-                emissive: 0xff0000,
-                emissiveIntensity: 0.5
+                leds.push({ mesh: led, material: ledMaterial, halo: halo });
+                deviceGroup.add(led);
+                deviceGroup.add(halo);
             });
-            const line = new THREE.Mesh(lineGeometry, lineMaterial);
-            line.position.set(0, scannerY - 15 + i * 4, 11.5);
-            terminal.add(line);
         }
 
-        // Etiqueta "SCANNER"
-        const scannerLabelGeometry = new THREE.BoxGeometry(50, 6, 1);
-        const scannerLabel = new THREE.Mesh(scannerLabelGeometry, new THREE.MeshStandardMaterial({
-            color: 0xffffff,
-            emissive: 0x666666,
-            emissiveIntensity: 0.2
-        }));
-        scannerLabel.position.set(0, scannerY - 26, 11);
-        terminal.add(scannerLabel);
+        function createScanner() {
+            const scannerY = 50;
 
-        // LEDs del scanner
-        const scannerLedPositions = [
-            { x: -25, y: scannerY + 18, color: 0xff0000 },
-            { x: 25, y: scannerY + 18, color: 0x00ff00 }
-        ];
-
-        scannerLedPositions.forEach(pos => {
-            const ledGeometry = new THREE.SphereGeometry(2, 16, 16);
-            const led = new THREE.Mesh(ledGeometry, new THREE.MeshStandardMaterial({
-                color: pos.color,
-                emissive: pos.color,
-                emissiveIntensity: 1
-            }));
-            led.position.set(pos.x, pos.y, 11);
-            terminal.add(led);
-        });
-
-        // === PANTALLA OLED (MÁS VISIBLE Y REALISTA) ===
-        const displayY = height/2 - 110;
-
-        // Marco de la pantalla
-        const displayFrameGeometry = new THREE.BoxGeometry(52, 30, 4);
-        const displayFrame = new THREE.Mesh(displayFrameGeometry, displayFrameMaterial);
-        displayFrame.position.set(0, displayY, 5);
-        displayFrame.castShadow = true;
-        terminal.add(displayFrame);
-
-        // Pantalla activa (área visible)
-        const displayGeometry = new THREE.BoxGeometry(46, 24, 2);
-        const display = new THREE.Mesh(displayGeometry, displayScreenMaterial);
-        display.position.set(0, displayY, 7.5);
-        terminal.add(display);
-
-        // Simular píxeles/texto en la pantalla
-        const pixelGroup = new THREE.Group();
-
-        // "Barcode Terminal" simulado
-        const textLines = [
-            { y: 8, width: 35, brightness: 1.0 },    // Título
-            { y: 4, width: 30, brightness: 0.7 },    // Línea 2
-            { y: 0, width: 38, brightness: 0.9 },    // Línea 3
-            { y: -4, width: 25, brightness: 0.6 },   // Línea 4
-            { y: -8, width: 32, brightness: 0.8 }    // Línea 5
-        ];
-
-        textLines.forEach(line => {
-            const textGeometry = new THREE.BoxGeometry(line.width, 2, 0.5);
-            const textMaterial = new THREE.MeshStandardMaterial({
-                color: 0x00ff00,
-                emissive: 0x00ff00,
-                emissiveIntensity: line.brightness
+            // Marco del scanner
+            const scannerFrameGeometry = new THREE.BoxGeometry(72, 46, 10);
+            const scannerFrameMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x0a0a0a,
+                roughness: 0.2,
+                metalness: 0.9,
+                clearcoat: 0.8
             });
-            const text = new THREE.Mesh(textGeometry, textMaterial);
-            text.position.set(0, displayY + line.y, 8.6);
-            terminal.add(text);
-        });
+            const scannerFrame = new THREE.Mesh(scannerFrameGeometry, scannerFrameMaterial);
+            scannerFrame.position.set(0, scannerY, 15);
+            scannerFrame.castShadow = true;
+            deviceGroup.add(scannerFrame);
 
-        // Borde iluminado de la pantalla
-        const displayGlowGeometry = new THREE.BoxGeometry(48, 26, 1.5);
-        const displayGlow = new THREE.Mesh(displayGlowGeometry, new THREE.MeshStandardMaterial({
-            color: 0x00ff00,
-            emissive: 0x00ff00,
-            emissiveIntensity: 0.2,
-            transparent: true,
-            opacity: 0.3
-        }));
-        displayGlow.position.set(0, displayY, 8.2);
-        terminal.add(displayGlow);
-
-        // === BOTONES (4 BOTONES TÁCTILES) ===
-        const buttonY = -height/2 + 40;
-        const buttonSpacing = 19;
-        const buttonStartX = -28.5;
-
-        const buttonLabels = ['▶', '✓', '✕', '☰'];
-        const buttonColors = [0x4CAF50, 0x2196F3, 0xf44336, 0xFF9800];
-
-        for (let i = 0; i < 4; i++) {
-            // Base del botón
-            const buttonBaseGeometry = new THREE.CylinderGeometry(6, 6, 2, 32);
-            const buttonBase = new THREE.Mesh(buttonBaseGeometry, new THREE.MeshStandardMaterial({
+            // Cuerpo del scanner
+            const scannerBodyGeometry = new THREE.BoxGeometry(68, 42, 12);
+            const scannerBodyMaterial = new THREE.MeshPhysicalMaterial({
                 color: 0x1a1a1a,
                 roughness: 0.3,
-                metalness: 0.6
-            }));
-            buttonBase.position.set(buttonStartX + i * buttonSpacing, buttonY, 5);
-            buttonBase.rotation.x = Math.PI / 2;
-            terminal.add(buttonBase);
+                metalness: 0.7
+            });
+            const scannerBody = new THREE.Mesh(scannerBodyGeometry, scannerBodyMaterial);
+            scannerBody.position.set(0, scannerY, 18);
+            scannerBody.castShadow = true;
+            deviceGroup.add(scannerBody);
 
-            // Botón superior
-            const buttonTopGeometry = new THREE.CylinderGeometry(5, 5, 3, 32);
-            const buttonTop = new THREE.Mesh(buttonTopGeometry, new THREE.MeshStandardMaterial({
-                color: buttonColors[i],
-                roughness: 0.4,
-                metalness: 0.5,
-                emissive: buttonColors[i],
+            // Ventana de vidrio ROJA translúcida
+            const scannerWindowGeometry = new THREE.BoxGeometry(60, 34, 3);
+            const scannerWindowMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xaa0000,
+                transparent: true,
+                opacity: 0.85,
+                roughness: 0.05,
+                metalness: 0.1,
+                transmission: 0.6,
+                thickness: 1,
+                emissive: 0x660000,
                 emissiveIntensity: 0.2
-            }));
-            buttonTop.position.set(buttonStartX + i * buttonSpacing, buttonY, 8);
-            buttonTop.rotation.x = Math.PI / 2;
-            buttonTop.castShadow = true;
-            terminal.add(buttonTop);
+            });
+            const scannerWindow = new THREE.Mesh(scannerWindowGeometry, scannerWindowMaterial);
+            scannerWindow.position.set(0, scannerY, 24);
+            deviceGroup.add(scannerWindow);
 
-            // Anillo LED alrededor del botón
-            const ringGeometry = new THREE.TorusGeometry(5.5, 0.5, 16, 32);
-            const ring = new THREE.Mesh(ringGeometry, new THREE.MeshStandardMaterial({
-                color: buttonColors[i],
-                emissive: buttonColors[i],
-                emissiveIntensity: 0.5
-            }));
-            ring.position.set(buttonStartX + i * buttonSpacing, buttonY, 7);
-            terminal.add(ring);
+            // Líneas láser rojas (8 líneas horizontales)
+            for (let i = 0; i < 8; i++) {
+                const laserGeometry = new THREE.PlaneGeometry(50, 0.6);
+                const laserMaterial = new THREE.MeshBasicMaterial({
+                    color: 0xff0000,
+                    transparent: true,
+                    opacity: 0.9,
+                    side: THREE.DoubleSide
+                });
+
+                const laser = new THREE.Mesh(laserGeometry, laserMaterial);
+                laser.position.set(0, scannerY + 15 - (i * 4), 25);
+                laser.userData.baseOpacity = 0.9;
+                laser.userData.phase = i * 0.15;
+
+                laserLines.push(laser);
+                deviceGroup.add(laser);
+            }
+
+            // Etiqueta "SCANNER"
+            const labelGeometry = new THREE.BoxGeometry(50, 6, 1);
+            const labelMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xffffff,
+                emissive: 0xcccccc,
+                emissiveIntensity: 0.2
+            });
+            const label = new THREE.Mesh(labelGeometry, labelMaterial);
+            label.position.set(0, scannerY - 26, 25);
+            deviceGroup.add(label);
+
+            // LEDs del scanner
+            const scannerLedPositions = [
+                { x: -25, y: scannerY + 18, color: 0xff0000 },
+                { x: 25, y: scannerY + 18, color: 0x00ff00 }
+            ];
+
+            scannerLedPositions.forEach(pos => {
+                const ledGeometry = new THREE.SphereGeometry(2, 16, 16);
+                const ledMaterial = new THREE.MeshBasicMaterial({
+                    color: pos.color,
+                    transparent: true,
+                    opacity: 1
+                });
+                const led = new THREE.Mesh(ledGeometry, ledMaterial);
+                led.position.set(pos.x, pos.y, 25);
+                led.userData.scannerLed = true;
+                led.userData.color = pos.color;
+                deviceGroup.add(led);
+            });
         }
 
-        // === PUERTO USB-C ===
-        const usbY = -height/2 + 8;
-        const usbHousingGeometry = new THREE.BoxGeometry(12, 4.5, 10);
-        const usbHousing = new THREE.Mesh(usbHousingGeometry, new THREE.MeshStandardMaterial({
-            color: 0x2a2a2a,
-            roughness: 0.3,
-            metalness: 0.7
-        }));
-        usbHousing.position.set(0, usbY, -depth/2 - 5);
-        usbHousing.rotation.x = Math.PI / 2;
-        terminal.add(usbHousing);
+        function createScreen() {
+            const screenY = -10;
 
-        // Interior del puerto USB-C
-        const usbPortGeometry = new THREE.BoxGeometry(9, 3, 7);
-        const usbPort = new THREE.Mesh(usbPortGeometry, new THREE.MeshStandardMaterial({
-            color: 0x000000,
-            roughness: 0.2,
-            metalness: 0.9
-        }));
-        usbPort.position.set(0, usbY, -depth/2 - 5);
-        usbPort.rotation.x = Math.PI / 2;
-        terminal.add(usbPort);
-
-        // === INTERRUPTOR ON/OFF (LATERAL) ===
-        const switchGeometry = new THREE.BoxGeometry(5, 15, 4);
-        const powerSwitch = new THREE.Mesh(switchGeometry, new THREE.MeshStandardMaterial({
-            color: 0xc0392b,
-            roughness: 0.4,
-            metalness: 0.4
-        }));
-        powerSwitch.position.set(width/2 - 2, height/2 - 25, -depth/2);
-        powerSwitch.castShadow = true;
-        terminal.add(powerSwitch);
-
-        // === LEDS INDICADORES SUPERIORES ===
-        const ledIndicatorY = height/2 - 15;
-        const ledIndicators = [
-            { x: -20, color: 0xff0000, label: 'BAT' },
-            { x: 0, color: 0x00ff00, label: 'PWR' },
-            { x: 20, color: 0x0066ff, label: 'BLE' }
-        ];
-
-        ledIndicators.forEach(indicator => {
-            const ledGeometry = new THREE.SphereGeometry(1.8, 16, 16);
-            const led = new THREE.Mesh(ledGeometry, new THREE.MeshStandardMaterial({
-                color: indicator.color,
-                emissive: indicator.color,
-                emissiveIntensity: 0.8
-            }));
-            led.position.set(indicator.x, ledIndicatorY, 6);
-            terminal.add(led);
-
-            // Halo de luz alrededor del LED
-            const haloGeometry = new THREE.SphereGeometry(2.5, 16, 16);
-            const halo = new THREE.Mesh(haloGeometry, new THREE.MeshStandardMaterial({
-                color: indicator.color,
-                emissive: indicator.color,
-                emissiveIntensity: 0.3,
-                transparent: true,
-                opacity: 0.4
-            }));
-            halo.position.set(indicator.x, ledIndicatorY, 6);
-            terminal.add(halo);
-        });
-
-        // === ALTAVOZ/BUZZER ===
-        const speakerGeometry = new THREE.CylinderGeometry(10, 10, 2, 32);
-        const speaker = new THREE.Mesh(speakerGeometry, new THREE.MeshStandardMaterial({
-            color: 0x1a1a1a,
-            roughness: 0.7,
-            metalness: 0.3
-        }));
-        speaker.position.set(0, -height/2 + 75, 5);
-        speaker.rotation.x = Math.PI / 2;
-        terminal.add(speaker);
-
-        // Rejilla del altavoz
-        for (let i = 0; i < 20; i++) {
-            const angle = (i / 20) * Math.PI * 2;
-            const radius = 6;
-            const holeGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
-            const hole = new THREE.Mesh(holeGeometry, new THREE.MeshStandardMaterial({
-                color: 0x000000
-            }));
-            hole.position.set(
-                Math.cos(angle) * radius,
-                -height/2 + 75,
-                5 + Math.sin(angle) * radius
-            );
-            hole.rotation.x = Math.PI / 2;
-            terminal.add(hole);
-        }
-
-        // === LOGO/MARCA ===
-        const logoGeometry = new THREE.BoxGeometry(40, 8, 1);
-        const logo = new THREE.Mesh(logoGeometry, new THREE.MeshStandardMaterial({
-            color: 0x3498db,
-            emissive: 0x2980b9,
-            emissiveIntensity: 0.4,
-            roughness: 0.3,
-            metalness: 0.6
-        }));
-        logo.position.set(0, -height/2 + 20, 6);
-        terminal.add(logo);
-
-        // Detalles de ventilación (laterales)
-        for (let i = 0; i < 5; i++) {
-            const ventGeometry = new THREE.BoxGeometry(2, 15, 0.5);
-            const vent = new THREE.Mesh(ventGeometry, new THREE.MeshStandardMaterial({
+            // Marco de la pantalla
+            const screenFrameGeometry = new THREE.BoxGeometry(52, 30, 4);
+            const screenFrameMaterial = new THREE.MeshPhysicalMaterial({
                 color: 0x000000,
-                roughness: 0.8
-            }));
-            vent.position.set(width/2 - 8, -20 + i * 15, 5);
-            terminal.add(vent);
-        }
+                roughness: 0.3,
+                metalness: 0.6
+            });
+            const screenFrame = new THREE.Mesh(screenFrameGeometry, screenFrameMaterial);
+            screenFrame.position.set(0, screenY, 17);
+            screenFrame.castShadow = true;
+            deviceGroup.add(screenFrame);
 
-        // Agregar terminal a la escena
-        scene.add(terminal);
+            // Pantalla OLED encendida (verde)
+            const screenGeometry = new THREE.BoxGeometry(46, 24, 2);
+            const screenMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x0a3d1a,
+                emissive: 0x00ff00,
+                emissiveIntensity: 0.4,
+                roughness: 0.1,
+                metalness: 0.1
+            });
+            const screen = new THREE.Mesh(screenGeometry, screenMaterial);
+            screen.position.set(0, screenY, 20);
+            deviceGroup.add(screen);
 
-        // === PLATAFORMA DE EXHIBICIÓN ===
-        const platformGeometry = new THREE.CylinderGeometry(110, 120, 8, 64);
-        const platformMaterial = new THREE.MeshStandardMaterial({
-            color: 0x0f1922,
-            roughness: 0.2,
-            metalness: 0.7
-        });
-        const platform = new THREE.Mesh(platformGeometry, platformMaterial);
-        platform.position.y = -height/2 - 8;
-        platform.receiveShadow = true;
-        scene.add(platform);
+            // Líneas de texto simuladas (5 líneas)
+            const textLines = [
+                { y: 8, width: 35 },
+                { y: 4, width: 30 },
+                { y: 0, width: 38 },
+                { y: -4, width: 25 },
+                { y: -8, width: 32 }
+            ];
 
-        // Anillos concéntricos en la plataforma
-        for (let i = 1; i <= 3; i++) {
-            const ringGeometry = new THREE.RingGeometry(100 + i * 8, 102 + i * 8, 64);
-            const ringMaterial = new THREE.MeshStandardMaterial({
-                color: 0x3498db,
-                side: THREE.DoubleSide,
-                emissive: 0x2980b9,
-                emissiveIntensity: 0.3 / i,
+            textLines.forEach(line => {
+                const lineGeometry = new THREE.BoxGeometry(line.width, 2, 0.8);
+                const lineMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x00ff00,
+                    transparent: true,
+                    opacity: 0.95
+                });
+
+                const textLine = new THREE.Mesh(lineGeometry, lineMaterial);
+                textLine.position.set(0, screenY + line.y, 21.5);
+                deviceGroup.add(textLine);
+            });
+
+            // Resplandor verde de la pantalla
+            const glowGeometry = new THREE.PlaneGeometry(48, 26);
+            const glowMaterial = new THREE.MeshBasicMaterial({
+                color: 0x00ff00,
                 transparent: true,
-                opacity: 0.6 / i
+                opacity: 0.2,
+                side: THREE.DoubleSide
             });
-            const ring = new THREE.Mesh(ringGeometry, ringMaterial);
-            ring.rotation.x = -Math.PI / 2;
-            ring.position.y = -height/2 - 3.5;
-            scene.add(ring);
+            screenGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+            screenGlow.position.set(0, screenY, 21.2);
+            deviceGroup.add(screenGlow);
         }
 
-        // === PARTÍCULAS DE FONDO ===
-        const particlesGeometry = new THREE.BufferGeometry();
-        const particlesCount = 300;
-        const posArray = new Float32Array(particlesCount * 3);
+        function createSpeaker() {
+            const speakerY = -55;
 
-        for (let i = 0; i < particlesCount * 3; i++) {
-            posArray[i] = (Math.random() - 0.5) * 600;
-        }
+            const speakerGeometry = new THREE.CylinderGeometry(10, 10, 2, 32);
+            const speakerMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x1a1a1a,
+                roughness: 0.7,
+                metalness: 0.3
+            });
+            const speaker = new THREE.Mesh(speakerMaterial, speakerGeometry);
+            speaker.rotation.x = Math.PI / 2;
+            speaker.position.set(0, speakerY, 17);
+            deviceGroup.add(speaker);
 
-        particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
-        const particlesMaterial = new THREE.PointsMaterial({
-            size: 2,
-            color: 0x3498db,
-            transparent: true,
-            opacity: 0.6,
-            blending: THREE.AdditiveBlending
-        });
-
-        const particlesMesh = new THREE.Points(particlesGeometry, particlesMaterial);
-        scene.add(particlesMesh);
-
-        // === ANIMACIÓN ===
-        let time = 0;
-        function animate() {
-            requestAnimationFrame(animate);
-
-            time += 0.008;
-
-            // Rotación suave automática del terminal
-            terminal.rotation.y = Math.sin(time * 0.2) * 0.15;
-
-            // Animación de LEDs del scanner
-            scannerLedPositions.forEach((pos, index) => {
-                const led = terminal.children.find(child =>
-                    child.position.x === pos.x &&
-                    child.position.y === pos.y &&
-                    child.geometry instanceof THREE.SphereGeometry
+            // Agujeros del altavoz (12 agujeros en círculo)
+            for (let i = 0; i < 12; i++) {
+                const angle = (i / 12) * Math.PI * 2;
+                const holeGeometry = new THREE.CylinderGeometry(0.4, 0.4, 1, 8);
+                const holeMaterial = new THREE.MeshBasicMaterial({ color: 0x000000 });
+                const hole = new THREE.Mesh(holeGeometry, holeMaterial);
+                hole.rotation.x = Math.PI / 2;
+                hole.position.set(
+                    Math.cos(angle) * 6,
+                    speakerY + Math.sin(angle) * 6,
+                    17
                 );
-                if (led) {
-                    led.material.emissiveIntensity = 0.6 + Math.sin(time * 2 + index) * 0.4;
-                }
-            });
-
-            // Parpadeo de LEDs indicadores
-            ledIndicators.forEach((indicator, index) => {
-                const intensity = 0.6 + Math.sin(time * 1.5 + index * 2) * 0.3;
-                // Buscar y actualizar los LEDs
-            });
-
-            // Rotación de partículas
-            particlesMesh.rotation.y = time * 0.03;
-            particlesMesh.rotation.x = time * 0.02;
-
-            // Pulsación suave de la luz del scanner
-            scannerLight.intensity = 0.6 + Math.sin(time * 3) * 0.3;
-
-            controls.update();
-            renderer.render(scene, camera);
+                deviceGroup.add(hole);
+            }
         }
 
-        // === RESPONSIVE ===
-        window.addEventListener('resize', () => {
+        function createLogo() {
+            const logoGeometry = new THREE.BoxGeometry(40, 8, 1);
+            const logoMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x3498db,
+                emissive: 0x2980b9,
+                emissiveIntensity: 0.4,
+                roughness: 0.3,
+                metalness: 0.6,
+                clearcoat: 0.8,
+                clearcoatRoughness: 0.2
+            });
+            const logo = new THREE.Mesh(logoGeometry, logoMaterial);
+            logo.position.set(0, -67, 19);
+            deviceGroup.add(logo);
+        }
+
+        function createButtons() {
+            const buttonY = -72;
+            const buttonColors = [
+                { color: 0x4CAF50, emissive: 0x4CAF50, x: -28.5 },
+                { color: 0x2196F3, emissive: 0x2196F3, x: -9.5 },
+                { color: 0xf44336, emissive: 0xf44336, x: 9.5 },
+                { color: 0xFF9800, emissive: 0xFF9800, x: 28.5 }
+            ];
+
+            buttonColors.forEach(btnInfo => {
+                // Base del botón
+                const buttonBaseGeometry = new THREE.BoxGeometry(12, 12, 2);
+                const buttonBaseMaterial = new THREE.MeshPhysicalMaterial({
+                    color: 0x1a1a1a,
+                    roughness: 0.8,
+                    metalness: 0.2
+                });
+                const buttonBase = new THREE.Mesh(buttonBaseGeometry, buttonBaseMaterial);
+                buttonBase.position.set(btnInfo.x, buttonY, 17);
+                deviceGroup.add(buttonBase);
+
+                // Botón superior
+                const buttonTopGeometry = new THREE.BoxGeometry(10, 10, 3);
+                const buttonTopMaterial = new THREE.MeshPhysicalMaterial({
+                    color: btnInfo.color,
+                    emissive: btnInfo.emissive,
+                    emissiveIntensity: 0.3,
+                    roughness: 0.4,
+                    metalness: 0.5,
+                    clearcoat: 0.8,
+                    clearcoatRoughness: 0.2
+                });
+                const buttonTop = new THREE.Mesh(buttonTopGeometry, buttonTopMaterial);
+                buttonTop.position.set(btnInfo.x, buttonY, 19);
+                buttonTop.castShadow = true;
+                deviceGroup.add(buttonTop);
+
+                // Anillo LED alrededor del botón
+                const ringGeometry = new THREE.TorusGeometry(5.5, 0.5, 16, 32);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: btnInfo.color,
+                    transparent: true,
+                    opacity: 0.5
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.position.set(btnInfo.x, buttonY, 18.5);
+                deviceGroup.add(ring);
+            });
+        }
+
+        function createUSBPort() {
+            const usbY = -80;
+
+            const usbHousingGeometry = new THREE.BoxGeometry(12, 4.5, 10);
+            const usbHousingMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x2a2a2a,
+                roughness: 0.3,
+                metalness: 0.7
+            });
+            const usbHousing = new THREE.Mesh(usbHousingGeometry, usbHousingMaterial);
+            usbHousing.position.set(0, usbY, -5);
+            usbHousing.rotation.x = Math.PI / 2;
+            deviceGroup.add(usbHousing);
+
+            // Interior del puerto USB-C
+            const usbPortGeometry = new THREE.BoxGeometry(9, 3, 7);
+            const usbPortMaterial = new THREE.MeshBasicMaterial({
+                color: 0x000000
+            });
+            const usbPort = new THREE.Mesh(usbPortGeometry, usbPortMaterial);
+            usbPort.position.set(0, usbY, -5);
+            usbPort.rotation.x = Math.PI / 2;
+            deviceGroup.add(usbPort);
+        }
+
+        function createPowerSwitch() {
+            const switchGeometry = new THREE.BoxGeometry(5, 15, 4);
+            const switchMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0xc0392b,
+                emissive: 0xc0392b,
+                emissiveIntensity: 0.1,
+                roughness: 0.4,
+                metalness: 0.4
+            });
+            const powerSwitch = new THREE.Mesh(switchGeometry, switchMaterial);
+            powerSwitch.position.set(42, 57.5, -2);
+            powerSwitch.castShadow = true;
+            deviceGroup.add(powerSwitch);
+        }
+
+        function createPlatform() {
+            // Plataforma cilíndrica
+            const platformGeometry = new THREE.CylinderGeometry(11, 12, 0.8, 64);
+            const platformMaterial = new THREE.MeshPhysicalMaterial({
+                color: 0x0f1922,
+                roughness: 0.2,
+                metalness: 0.7,
+                clearcoat: 0.3
+            });
+            platform = new THREE.Mesh(platformGeometry, platformMaterial);
+            platform.position.y = -9;
+            platform.receiveShadow = true;
+            scene.add(platform);
+
+            // Anillos concéntricos en la plataforma
+            for (let i = 1; i <= 3; i++) {
+                const ringGeometry = new THREE.RingGeometry(10 + i * 0.8, 10.2 + i * 0.8, 64);
+                const ringMaterial = new THREE.MeshBasicMaterial({
+                    color: 0x3498db,
+                    side: THREE.DoubleSide,
+                    transparent: true,
+                    opacity: 0.6 / i
+                });
+                const ring = new THREE.Mesh(ringGeometry, ringMaterial);
+                ring.rotation.x = -Math.PI / 2;
+                ring.position.y = -8.5;
+                platformRings.push(ring);
+                scene.add(ring);
+            }
+        }
+
+        function createParticles() {
+            const particlesGeometry = new THREE.BufferGeometry();
+            const particlesCount = 250;
+            const posArray = new Float32Array(particlesCount * 3);
+
+            for (let i = 0; i < particlesCount * 3; i++) {
+                posArray[i] = (Math.random() - 0.5) * 60;
+            }
+
+            particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+            const particlesMaterial = new THREE.PointsMaterial({
+                size: 0.15,
+                color: 0x3498db,
+                transparent: true,
+                opacity: 0.6,
+                blending: THREE.AdditiveBlending
+            });
+
+            particles = new THREE.Points(particlesGeometry, particlesMaterial);
+            scene.add(particles);
+        }
+
+        function setupEventListeners() {
+            window.addEventListener('resize', onWindowResize, false);
+
+            // Touch events para dispositivos móviles
+            renderer.domElement.addEventListener('touchstart', onTouchStart, false);
+            renderer.domElement.addEventListener('touchmove', onTouchMove, false);
+            renderer.domElement.addEventListener('touchend', onTouchEnd, false);
+        }
+
+        function onWindowResize() {
             camera.aspect = window.innerWidth / window.innerHeight;
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
-        });
+        }
 
-        animate();
+        function onTouchStart(event) {
+            controls.enabled = true;
+        }
+
+        function onTouchMove(event) {
+            event.preventDefault();
+        }
+
+        function onTouchEnd(event) {
+            // Mantener controles habilitados
+        }
+
+        function setView(view) {
+            const buttons = document.querySelectorAll('.control-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            controls.autoRotate = false;
+            controls.enabled = true;
+            autoRotate = false;
+
+            switch(view) {
+                case 'auto':
+                    controls.autoRotate = true;
+                    autoRotate = true;
+                    break;
+                case 'interactive':
+                    controls.enabled = true;
+                    controls.autoRotate = false;
+                    break;
+                case 'front':
+                    controls.enabled = false;
+                    animateToView({ x: 0, y: 0, z: 25 }, { x: 0, y: 0, z: 0 });
+                    break;
+                case 'back':
+                    controls.enabled = false;
+                    animateToView({ x: 0, y: 0, z: -25 }, { x: 0, y: 0, z: 0 });
+                    break;
+                case 'side':
+                    controls.enabled = false;
+                    animateToView({ x: 25, y: 0, z: 0 }, { x: 0, y: 0, z: 0 });
+                    break;
+                case 'angle':
+                    controls.enabled = false;
+                    animateToView({ x: 18, y: 12, z: 18 }, { x: 0, y: 0, z: 0 });
+                    break;
+            }
+        }
+
+        function animateToView(targetPos, targetLookAt) {
+            const duration = 1000; // ms
+            const startPos = camera.position.clone();
+            const startTime = performance.now();
+
+            function animate() {
+                const elapsed = performance.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                const eased = easeInOutCubic(progress);
+
+                camera.position.lerpVectors(startPos, new THREE.Vector3(targetPos.x, targetPos.y, targetPos.z), eased);
+                camera.lookAt(targetLookAt.x, targetLookAt.y, targetLookAt.z);
+                controls.target.set(targetLookAt.x, targetLookAt.y, targetLookAt.z);
+
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    controls.update();
+                }
+            }
+
+            animate();
+        }
+
+        function easeInOutCubic(t) {
+            return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            const delta = clock.getDelta();
+            const time = clock.getElapsedTime();
+
+            // Actualizar controles
+            controls.update();
+
+            // Animación de las líneas láser
+            laserLines.forEach((laser, index) => {
+                const opacity = (Math.sin(time * 3 + laser.userData.phase * Math.PI * 2) + 1) / 2;
+                laser.material.opacity = opacity * 0.6 + 0.3;
+            });
+
+            // Animación de LEDs
+            leds.forEach((led) => {
+                if (led.mesh.userData.name === 'battery') {
+                    const intensity = (Math.sin(time * 2) + 1) / 2;
+                    led.material.emissiveIntensity = intensity * 0.8 + 0.2;
+                    led.halo.material.opacity = intensity * 0.3 + 0.1;
+                } else if (led.mesh.userData.name === 'bluetooth') {
+                    const intensity = (Math.sin(time * 4) + 1) / 2;
+                    led.material.emissiveIntensity = intensity * 0.8 + 0.2;
+                    led.halo.material.opacity = intensity * 0.3 + 0.1;
+                } else {
+                    led.material.emissiveIntensity = 0.8;
+                    led.halo.material.opacity = 0.3;
+                }
+            });
+
+            // Animación del resplandor de la pantalla
+            if (screenGlow) {
+                screenGlow.material.opacity = (Math.sin(time * 2) + 1) / 2 * 0.15 + 0.1;
+            }
+
+            // Animación de la luz del scanner
+            scannerLight.intensity = (Math.sin(time * 3) + 1) / 2 * 0.4 + 0.3;
+
+            // Rotación de partículas
+            if (particles) {
+                particles.rotation.y = time * 0.03;
+                particles.rotation.x = time * 0.02;
+            }
+
+            // Animación de anillos de plataforma
+            platformRings.forEach((ring, index) => {
+                const scale = 1 + Math.sin(time * 2 + index * 0.5) * 0.02;
+                ring.scale.set(scale, scale, 1);
+                ring.material.opacity = (0.6 / (index + 1)) * (0.8 + Math.sin(time * 2 + index) * 0.2);
+            });
+
+            // Actualizar estadísticas (FPS)
+            updateStats();
+
+            renderer.render(scene, camera);
+        }
+
+        function updateStats() {
+            frameCount++;
+            const currentTime = performance.now();
+
+            if (currentTime >= lastTime + 1000) {
+                const fps = Math.round((frameCount * 1000) / (currentTime - lastTime));
+                const statsElement = document.getElementById('stats');
+                if (statsElement) {
+                    statsElement.textContent = `FPS: ${fps} | Objetos: ${scene.children.length}`;
+                }
+                frameCount = 0;
+                lastTime = currentTime;
+            }
+        }
+
+        // Iniciar la aplicación
+        window.addEventListener('DOMContentLoaded', init);
     </script>
 </body>
 </html>
