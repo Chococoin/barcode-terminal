@@ -1,0 +1,686 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Terminal 3D - Scanner de Códigos de Barras</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a1929 0%, #1a3a52 100%);
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            perspective: 1500px;
+            overflow: hidden;
+        }
+
+        .container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .device-wrapper {
+            position: relative;
+            transform-style: preserve-3d;
+            animation: rotate 20s infinite linear;
+            transition: transform 0.5s ease;
+        }
+
+        .device-wrapper:hover {
+            animation-play-state: paused;
+        }
+
+        @keyframes rotate {
+            0% { transform: rotateY(0deg) rotateX(-10deg); }
+            25% { transform: rotateY(90deg) rotateX(-10deg); }
+            50% { transform: rotateY(180deg) rotateX(-10deg); }
+            75% { transform: rotateY(270deg) rotateX(-10deg); }
+            100% { transform: rotateY(360deg) rotateX(-10deg); }
+        }
+
+        .device {
+            width: 170px;
+            height: 330px;
+            position: relative;
+            transform-style: preserve-3d;
+        }
+
+        .face {
+            position: absolute;
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            border: 1px solid #1a252f;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Cara frontal */
+        .front {
+            width: 170px;
+            height: 330px;
+            transform: translateZ(30px);
+            background: linear-gradient(135deg, #2a3540, #1a252f);
+            border-radius: 20px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        /* Cara trasera */
+        .back {
+            width: 170px;
+            height: 330px;
+            transform: rotateY(180deg) translateZ(30px);
+            background: linear-gradient(135deg, #34495e, #2c3e50);
+            border-radius: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Caras laterales */
+        .left {
+            width: 60px;
+            height: 330px;
+            transform: rotateY(-90deg) translateZ(85px);
+            background: linear-gradient(90deg, #2c3e50, #34495e);
+            border-radius: 10px;
+        }
+
+        .right {
+            width: 60px;
+            height: 330px;
+            transform: rotateY(90deg) translateZ(85px);
+            background: linear-gradient(90deg, #34495e, #2c3e50);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            padding: 20px 10px;
+        }
+
+        /* Caras superior e inferior */
+        .top {
+            width: 170px;
+            height: 60px;
+            transform: rotateX(90deg) translateZ(165px);
+            background: #2c3e50;
+            border-radius: 10px;
+        }
+
+        .bottom {
+            width: 170px;
+            height: 60px;
+            transform: rotateX(-90deg) translateZ(165px);
+            background: #2c3e50;
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Componentes frontales */
+        .leds {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+
+        .led {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            box-shadow: 0 0 10px currentColor;
+        }
+
+        .led.red {
+            background: #ff0000;
+            color: #ff0000;
+            animation: pulse 2s infinite;
+        }
+
+        .led.green {
+            background: #00ff00;
+            color: #00ff00;
+        }
+
+        .led.blue {
+            background: #0066ff;
+            color: #0066ff;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 0.5; }
+            50% { opacity: 1; }
+        }
+
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+
+        .scanner {
+            width: 140px;
+            height: 85px;
+            background: #0d0d0d;
+            border: 3px solid #1a1a1a;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 20px rgba(0, 0, 0, 0.5);
+        }
+
+        .scanner-window {
+            width: 120px;
+            height: 65px;
+            background: rgba(170, 0, 0, 0.8);
+            margin: 10px auto;
+            border-radius: 3px;
+            position: relative;
+            overflow: hidden;
+            box-shadow: 0 0 20px rgba(255, 0, 0, 0.3);
+        }
+
+        .laser-line {
+            position: absolute;
+            width: 100%;
+            height: 2px;
+            background: #ff0000;
+            box-shadow: 0 0 5px #ff0000;
+            animation: scan 1s infinite;
+        }
+
+        @keyframes scan {
+            0%, 100% { opacity: 0.7; }
+            50% { opacity: 1; }
+        }
+
+        .laser-line:nth-child(1) { top: 10%; animation-delay: 0s; }
+        .laser-line:nth-child(2) { top: 22%; animation-delay: 0.1s; }
+        .laser-line:nth-child(3) { top: 34%; animation-delay: 0.2s; }
+        .laser-line:nth-child(4) { top: 46%; animation-delay: 0.3s; }
+        .laser-line:nth-child(5) { top: 58%; animation-delay: 0.4s; }
+        .laser-line:nth-child(6) { top: 70%; animation-delay: 0.5s; }
+        .laser-line:nth-child(7) { top: 82%; animation-delay: 0.6s; }
+        .laser-line:nth-child(8) { top: 94%; animation-delay: 0.7s; }
+
+        .scanner-label {
+            position: absolute;
+            bottom: 2px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: white;
+            padding: 2px 10px;
+            font-size: 8px;
+            font-weight: bold;
+            border-radius: 2px;
+        }
+
+        .screen {
+            width: 100px;
+            height: 55px;
+            background: #0a3d1a;
+            border: 3px solid #0d0d0d;
+            border-radius: 3px;
+            margin-bottom: 15px;
+            padding: 5px;
+            box-shadow: 0 0 20px rgba(0, 255, 0, 0.3);
+            position: relative;
+        }
+
+        .screen-content {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 3px;
+        }
+
+        .text-line {
+            height: 3px;
+            background: #00ff00;
+            box-shadow: 0 0 3px #00ff00;
+            opacity: 0.9;
+        }
+
+        .text-line:nth-child(1) { width: 80%; }
+        .text-line:nth-child(2) { width: 65%; }
+        .text-line:nth-child(3) { width: 90%; }
+        .text-line:nth-child(4) { width: 55%; }
+        .text-line:nth-child(5) { width: 75%; }
+
+        .speaker {
+            width: 35px;
+            height: 35px;
+            background: #1a1a1a;
+            border-radius: 50%;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-wrap: wrap;
+            padding: 8px;
+        }
+
+        .speaker-hole {
+            width: 3px;
+            height: 3px;
+            background: #000;
+            border-radius: 50%;
+            margin: 1px;
+        }
+
+        .logo {
+            width: 70px;
+            height: 14px;
+            background: linear-gradient(90deg, #3498db, #2980b9);
+            border-radius: 3px;
+            margin-bottom: 15px;
+            box-shadow: 0 0 10px rgba(52, 152, 219, 0.5);
+        }
+
+        .buttons {
+            display: flex;
+            gap: 10px;
+        }
+
+        .button {
+            width: 20px;
+            height: 20px;
+            border-radius: 3px;
+            background: #1a1a1a;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .button:hover {
+            transform: translateZ(5px) scale(1.1);
+        }
+
+        .button-inner {
+            width: 14px;
+            height: 14px;
+            border-radius: 2px;
+        }
+
+        .button.scan .button-inner {
+            background: #4CAF50;
+            box-shadow: 0 0 8px #4CAF50;
+        }
+
+        .button.ok .button-inner {
+            background: #2196F3;
+            box-shadow: 0 0 8px #2196F3;
+        }
+
+        .button.cancel .button-inner {
+            background: #f44336;
+            box-shadow: 0 0 8px #f44336;
+        }
+
+        .button.menu .button-inner {
+            background: #FF9800;
+            box-shadow: 0 0 8px #FF9800;
+        }
+
+        /* Puerto USB-C */
+        .usb-port {
+            width: 30px;
+            height: 10px;
+            background: #2a2a2a;
+            border: 1px solid #1a1a1a;
+            border-radius: 5px;
+            box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.5);
+        }
+
+        /* Interruptor lateral */
+        .power-switch {
+            width: 30px;
+            height: 8px;
+            background: #c0392b;
+            border-radius: 4px;
+            margin-bottom: 20px;
+            box-shadow: 0 0 5px rgba(192, 57, 43, 0.5);
+        }
+
+        /* Ventilación lateral */
+        .vents {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-top: auto;
+        }
+
+        .vent {
+            width: 3px;
+            height: 25px;
+            background: #000;
+            border-radius: 1px;
+        }
+
+        /* Logo trasero */
+        .back-logo {
+            width: 100px;
+            height: 100px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 48px;
+            color: rgba(255, 255, 255, 0.2);
+            font-weight: bold;
+        }
+
+        /* Controles */
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 20px;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 15px 25px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .control-btn {
+            padding: 8px 16px;
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: all 0.3s;
+            font-size: 14px;
+        }
+
+        .control-btn:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+
+        .control-btn.active {
+            background: #3498db;
+            border-color: #3498db;
+        }
+
+        /* Info panel */
+        .info-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            color: white;
+            backdrop-filter: blur(10px);
+            max-width: 250px;
+        }
+
+        .info-panel h2 {
+            margin-bottom: 10px;
+            color: #3498db;
+            font-size: 18px;
+        }
+
+        .info-panel p {
+            margin-bottom: 8px;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .spec {
+            display: flex;
+            justify-content: space-between;
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .spec strong {
+            color: #3498db;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="info-panel">
+            <h2>Terminal GM67 Pro</h2>
+            <div class="spec">
+                <strong>Modelo:</strong>
+                <span>SCN-2025-X</span>
+            </div>
+            <div class="spec">
+                <strong>Scanner:</strong>
+                <span>2D/1D GM67</span>
+            </div>
+            <div class="spec">
+                <strong>Pantalla:</strong>
+                <span>OLED 128x64</span>
+            </div>
+            <div class="spec">
+                <strong>Conectividad:</strong>
+                <span>BT 5.0 / USB-C</span>
+            </div>
+            <div class="spec">
+                <strong>Batería:</strong>
+                <span>3000mAh Li-Po</span>
+            </div>
+            <div class="spec">
+                <strong>Peso:</strong>
+                <span>~175g</span>
+            </div>
+        </div>
+
+        <div class="device-wrapper" id="device3d">
+            <div class="device">
+                <!-- Cara frontal -->
+                <div class="face front">
+                    <div class="leds">
+                        <div class="led red"></div>
+                        <div class="led green"></div>
+                        <div class="led blue"></div>
+                    </div>
+
+                    <div class="scanner">
+                        <div class="scanner-window">
+                            <div class="laser-line"></div>
+                            <div class="laser-line"></div>
+                            <div class="laser-line"></div>
+                            <div class="laser-line"></div>
+                            <div class="laser-line"></div>
+                            <div class="laser-line"></div>
+                            <div class="laser-line"></div>
+                            <div class="laser-line"></div>
+                        </div>
+                        <div class="scanner-label">SCANNER</div>
+                    </div>
+
+                    <div class="screen">
+                        <div class="screen-content">
+                            <div class="text-line"></div>
+                            <div class="text-line"></div>
+                            <div class="text-line"></div>
+                            <div class="text-line"></div>
+                            <div class="text-line"></div>
+                        </div>
+                    </div>
+
+                    <div class="speaker">
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                        <div class="speaker-hole"></div>
+                    </div>
+
+                    <div class="logo"></div>
+
+                    <div class="buttons">
+                        <div class="button scan">
+                            <div class="button-inner"></div>
+                        </div>
+                        <div class="button ok">
+                            <div class="button-inner"></div>
+                        </div>
+                        <div class="button cancel">
+                            <div class="button-inner"></div>
+                        </div>
+                        <div class="button menu">
+                            <div class="button-inner"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cara trasera -->
+                <div class="face back">
+                    <div class="back-logo">GM</div>
+                </div>
+
+                <!-- Cara izquierda -->
+                <div class="face left">
+                    <div style="padding: 20px 10px;">
+                        <div class="vents">
+                            <div class="vent"></div>
+                            <div class="vent"></div>
+                            <div class="vent"></div>
+                            <div class="vent"></div>
+                            <div class="vent"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cara derecha -->
+                <div class="face right">
+                    <div class="power-switch"></div>
+                </div>
+
+                <!-- Cara superior -->
+                <div class="face top"></div>
+
+                <!-- Cara inferior -->
+                <div class="face bottom">
+                    <div class="usb-port"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="control-btn active" onclick="setRotation('auto')">Auto-Rotación</button>
+            <button class="control-btn" onclick="setRotation('front')">Vista Frontal</button>
+            <button class="control-btn" onclick="setRotation('back')">Vista Trasera</button>
+            <button class="control-btn" onclick="setRotation('side')">Vista Lateral</button>
+            <button class="control-btn" onclick="setRotation('angle')">Vista 3/4</button>
+        </div>
+    </div>
+
+    <script>
+        const device = document.getElementById('device3d');
+        let isDragging = false;
+        let currentX;
+        let currentY;
+        let initialX;
+        let initialY;
+        let xOffset = 0;
+        let yOffset = 0;
+        let autoRotate = true;
+
+        function setRotation(view) {
+            const buttons = document.querySelectorAll('.control-btn');
+            buttons.forEach(btn => btn.classList.remove('active'));
+            event.target.classList.add('active');
+
+            device.style.animation = 'none';
+            autoRotate = false;
+
+            switch(view) {
+                case 'auto':
+                    device.style.animation = 'rotate 20s infinite linear';
+                    autoRotate = true;
+                    break;
+                case 'front':
+                    device.style.transform = 'rotateY(0deg) rotateX(0deg)';
+                    break;
+                case 'back':
+                    device.style.transform = 'rotateY(180deg) rotateX(0deg)';
+                    break;
+                case 'side':
+                    device.style.transform = 'rotateY(90deg) rotateX(0deg)';
+                    break;
+                case 'angle':
+                    device.style.transform = 'rotateY(45deg) rotateX(-20deg)';
+                    break;
+            }
+        }
+
+        // Interacción con el mouse para rotar manualmente
+        device.addEventListener('mousedown', dragStart);
+        document.addEventListener('mouseup', dragEnd);
+        document.addEventListener('mousemove', drag);
+
+        function dragStart(e) {
+            if (!autoRotate) {
+                initialX = e.clientX - xOffset;
+                initialY = e.clientY - yOffset;
+
+                if (e.target.closest('.device-wrapper')) {
+                    isDragging = true;
+                    device.style.cursor = 'grabbing';
+                }
+            }
+        }
+
+        function dragEnd(e) {
+            initialX = currentX;
+            initialY = currentY;
+            isDragging = false;
+            device.style.cursor = 'grab';
+        }
+
+        function drag(e) {
+            if (isDragging && !autoRotate) {
+                e.preventDefault();
+                currentX = e.clientX - initialX;
+                currentY = e.clientY - initialY;
+
+                xOffset = currentX;
+                yOffset = currentY;
+
+                device.style.transform = `rotateY(${currentX}deg) rotateX(${-currentY}deg)`;
+            }
+        }
+
+        // Animación de los botones al hacer clic
+        document.querySelectorAll('.button').forEach(button => {
+            button.addEventListener('click', function() {
+                this.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    this.style.transform = 'scale(1)';
+                }, 200);
+            });
+        });
+    </script>
+</body>
+</html>
