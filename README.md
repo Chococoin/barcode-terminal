@@ -509,3 +509,4 @@ Este proyecto se basa en el trabajo de la comunidad open-source:
 
 *Última actualización: 2025-01-08*
 *Versión documentación: 1.0.0*
+# barcode-terminal
